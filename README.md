@@ -48,7 +48,7 @@ TODO
 
 - daemonize
 - crontabize
-- store processed stories locally?
+- store processed stories instead of simply locally?
 - cap deploy?
 
 

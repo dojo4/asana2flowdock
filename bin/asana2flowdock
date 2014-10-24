@@ -35,6 +35,12 @@ Main {
       index :key, :unique=>true
       index :value
     end unless table_exists?('state')
+
+    create_table('digests') do
+      primary_key 'id'
+      String 'digest'
+      index :digest, :unique=>true
+    end unless table_exists?('digests')
   }
 
   option('--daemonize', '-d')
@@ -71,7 +77,8 @@ Main {
   def process_stories!
   #
     ago = last_run_time
-    relayed_any_messages = false
+    most_recent_created_at = nil
+    slop = 120
 
   #
     logger.info "ago: #{ ago }"
@@ -86,12 +93,22 @@ Main {
 
   #
     workspace.projects.each do |project|
-      project.tasks(:modified_since => ago.iso8601).each do |task|
+      project.tasks(:modified_since => (ago - slop).iso8601).each do |task|
 
         next if task.name =~ /:\s*$/ # skip sections...
 
-        task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').threadify do |story|
-          if Coerce.time(story[:created_at]) >= ago
+        task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').map do |story|
+          digest = Digest::MD5.hexdigest(story.to_json)
+
+          if db[:digests].where(:digest => digest).first
+            next
+          else
+            db[:digests].insert(:digest => digest)
+          end
+
+          created_at = Coerce.time(story[:created_at])
+
+          if created_at >= ago
           #
             created_by = story[:created_by] || Map.new
 
@@ -121,6 +138,12 @@ Main {
           #
             pushed = flow.push_to_team_inbox(msg)
 
+            if pushed
+              if most_recent_created_at && created_at > most_recent_created_at
+                most_recent_created_at = created_at
+              end
+            end
+
             relayed_any_messages = true if pushed
 
             logger.info "relayed #{ url }"
@@ -131,7 +154,9 @@ Main {
     end
 
   #
-    set_last_run_time! if relayed_any_messages
+    if most_recent_created_at
+      set_last_run_time! most_recent_created_at
+    end
   end
 
   def last_run_time
@@ -349,6 +374,7 @@ BEGIN {
   require 'cgi'
   require 'uri'
   require 'time'
+  require 'digest/md5'
 
 #
   require 'main'
@@ -545,13 +571,13 @@ BEGIN {
       def projects(options = {})
         options = Map.for(options)
 
-        workspaces.threadify{|workspace| workspace.projects(options)}
+        workspaces.map{|workspace| workspace.projects(options)}
       end
 
       def tasks(options = {})
         options = Map.for(options)
 
-        workspaces.threadify do |workspace|
+        workspaces.map do |workspace|
           workspace.tasks(options.merge(:assignee => id))
         end.flatten.compact
       end
@@ -569,7 +595,7 @@ BEGIN {
         if options.has?(:assignee)
           api.get("/tasks", Task, options.merge(:workspace => id))
         else
-          projects.threadify do |project|
+          projects.map do |project|
             project.tasks(options)
           end.flatten.compact
         end

@@ -37,26 +37,10 @@ Main {
     end unless table_exists?('state')
   }
 
-=begin
- {"id"=>18199846750605,
-  "created_at"=>"2014-10-19T01:48:18.020Z",
-  "type"=>"comment",
-  "text"=>
-   "Can use some refinement and probably additions, but in a good place to wire up and show off...",
-  "created_by"=>{"id"=>17675380473837, "name"=>"steve"}},
-=end
-
-=begin
-  config ({
-    'asana' => {'token' => 'your asana token'},
-    'flowdock' => {'token' => 'your flowdock token'}
-  })
-=end
-
   option('--daemonize', '-d')
   option('--quiet', '-q')
 
-  state_path File.expand_path( File.join(File.dirname(__FILE__), "../.asana2flowdock") )
+  dotdir File.expand_path( File.join(File.dirname(__FILE__), "../.asana2flowdock") )
 
   def run
   #
@@ -133,9 +117,9 @@ Main {
             msg[:tags]    = ["asana"]
 
           #
-            pushed = flow.push_to_team_inbox(msg)
-
-            relayed_any_messages = true if pushed
+            #pushed = flow.push_to_team_inbox(msg)
+            #relayed_any_messages = true if pushed
+            relayed_any_messages = true
 
             logger.info "relayed #{ url }"
           end
@@ -149,17 +133,28 @@ Main {
   end
 
   def last_run_time
-    begin
-      Time.parse(db[:state].where(:key => 'last_run_time').first[:value])
-    rescue
-      set_last_run_time!
+    if db[:state].where(:key => 'last_run_time').first.nil?
+      hr = 60 * 60
+      value = (Time.now - hr).utc.iso8601(3)
+      db[:state].insert(:key => 'last_run_time', :value => value)
     end
+
+    Time.parse(db[:state].where(:key => 'last_run_time').first[:value])
   end
 
-  def set_last_run_time!(value = (Time.now - (1 * 60 * 60)).iso8601)
+  def set_last_run_time!(*args)
+    value =
+      if args.empty?
+        Time.now
+      else
+        args.first
+      end
+
     unless value.is_a?(String)
-      value = value.iso8601
+      value = value.utc.iso8601(3)
     end
+
+    Time.parse(value)
 
     begin
       db[:state].insert(:key => 'last_run_time', :value => value)
@@ -388,9 +383,9 @@ BEGIN {
       Uri = URI.parse('https://app.asana.com/api/1.0')
 
     #
-      fattr(:debug){ false }
       fattr(:token)
       fattr(:uri){ Uri.dup }
+      fattr(:debug){ false }
       fattr(:logger){ nil }
 
     #

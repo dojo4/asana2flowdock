@@ -31,7 +31,12 @@ DEPLOY
 
 ~> ctrl-c
 
-~> ./bin/asana2flowdock run
+dojo4@ip-10-191-128-13:~/git/asana2flowdock$ while true;do ./bin/asana2flowdock run; done
+# I, [2014-10-24T07:06:18.952743 #28483]  INFO -- : ago: 2014-10-24 05:32:09 +0000
+# I, [2014-10-24T07:06:30.177388 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
+# I, [2014-10-24T07:06:30.178715 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
+# I, [2014-10-24T07:06:30.179640 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
+# I, [2014-10-24T07:06:30.181069 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
 
 ```
 

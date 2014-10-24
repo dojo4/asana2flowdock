@@ -56,7 +56,7 @@ Main {
   option('--daemonize', '-d')
   option('--quiet', '-q')
 
-  #state_path File.expand_path( File.join(File.dirname(__FILE__), "../state") )
+  state_path File.expand_path( File.join(File.dirname(__FILE__), "../.asana2flowdock") )
 
   def run
   #

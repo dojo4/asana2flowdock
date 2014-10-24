@@ -23,13 +23,13 @@ DEPLOY
 
 ~> cd git/asana2flowdock
 
-~> git pull
-
 ~> screen -list # look for the screen yo!
 
 ~> screen -d -r asana2flowdock  # or screen -S asana2flowdock
 
 ~> ctrl-c
+
+~> git pull
 
 dojo4@ip-10-191-128-13:~/git/asana2flowdock$ while true;do ./bin/asana2flowdock run; done
 # I, [2014-10-24T07:06:18.952743 #28483]  INFO -- : ago: 2014-10-24 05:32:09 +0000

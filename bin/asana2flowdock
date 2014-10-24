@@ -88,6 +88,8 @@ Main {
     workspace.projects.each do |project|
       project.tasks(:modified_since => ago.iso8601).each do |task|
 
+        next if task.name =~ /:\s*$/ # skip sections...
+
         task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').threadify do |story|
           if Coerce.time(story[:created_at]) >= ago
           #

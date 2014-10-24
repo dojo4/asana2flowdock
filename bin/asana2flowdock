@@ -95,7 +95,8 @@ Main {
     workspace.projects.each do |project|
       project.tasks(:modified_since => (ago - slop).iso8601).each do |task|
 
-        next if task.name =~ /:\s*$/ # skip sections...
+        next if task.name =~ /:\s*$/   # skip sections...
+        next if task.name.strip.empty? # skip shite
 
         task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').map do |story|
           digest = Digest::MD5.hexdigest(story.to_json)

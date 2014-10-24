@@ -302,6 +302,7 @@ Main {
   end
 
   def lock!(which = :default)
+    FileUtils.mkdir_p(dotdir)
     path = File.join(dotdir, "#{ which }.lock")
     FileUtils.touch(path) rescue nil
     lock = open(path, 'ab+') rescue open(path, 'wb+')

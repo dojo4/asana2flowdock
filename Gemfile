@@ -1,0 +1,15 @@
+# A sample Gemfile
+source "https://rubygems.org"
+
+gem "arrayfields", "~> 4.7.4"
+gem "main"
+gem "amalgalite"
+gem "sequel"
+gem "json"
+gem "map"
+gem "coerce"
+gem "fattr"
+gem "threadify"
+gem "pry"
+gem "sekrets"
+gem "flowdock"

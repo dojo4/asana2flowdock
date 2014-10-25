@@ -76,14 +76,6 @@ Main {
 
   def process_stories!
   #
-    ago = last_run_time
-    most_recent_created_at = nil
-    slop = 120
-
-  #
-    logger.info "ago: #{ ago }"
-
-  #
     asana = Asana.api_for sekrets.get(:asana, :token)
     #asana.debug = true
     #asana.logger = logger
@@ -92,9 +84,19 @@ Main {
     workspace = asana.my.workspaces.detect{|workspace| workspace.name == 'dojo4.com'}
 
   #
+    last_run_time = last_run_time!
+
+  #
+    logger.info "last_run_time: #{ last_run_time }"
+
+  #
+    started_at = Time.now
+    window     = (last_run_time.to_f ... started_at.to_f)
+
+  #
     workspace.projects.each do |project|
 
-      project.tasks(:modified_since => (ago - slop).iso8601).each do |task|
+      project.tasks(:modified_since => last_run_time.iso8601).each do |task|
         next if task.name =~ /:\s*$/   # skip sections...
         next if task.name.strip.empty? # skip shite
 
@@ -102,15 +104,14 @@ Main {
 
         task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').map do |story|
           created_at = Coerce.time(story[:created_at])
+          next unless window.include?(created_at.to_f)
 
-          if created_at >= ago
-            created_by = story[:created_by]
-            next unless created_by
+          created_by = story[:created_by]
+          next unless created_by
 
-            batch[task] ||= {}
-            batch[task][created_by] ||= []
-            batch[task][created_by].push(story)
-          end
+          batch[task] ||= {}
+          batch[task][created_by] ||= []
+          batch[task][created_by].push(story)
         end
 
       #
@@ -165,15 +166,7 @@ Main {
           #
             pushed = flow.push_to_team_inbox(msg)
 
-            if pushed
-              db[:digests].insert(:digest => digest)
-
-              created_at = stories.map{|story| Coerce.time(story[:created_at])}.max
-
-              if most_recent_created_at && created_at > most_recent_created_at
-                most_recent_created_at = created_at
-              end
-            end
+            db[:digests].insert(:digest => digest) if pushed
 
           #
             logger.info "relayed #{ created_by[:email] } activity for #{ url }"
@@ -184,12 +177,10 @@ Main {
     end
 
   #
-    if most_recent_created_at
-      set_last_run_time! most_recent_created_at
-    end
+    set_last_run_time!(started_at)
   end
 
-  def last_run_time
+  def last_run_time!
     if db[:state].where(:key => 'last_run_time').first.nil?
       hr = 60 * 60
       value = (Time.now - hr).utc.iso8601(3)

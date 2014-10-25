@@ -93,33 +93,37 @@ Main {
 
   #
     workspace.projects.each do |project|
-      project.tasks(:modified_since => (ago - slop).iso8601).each do |task|
 
+      project.tasks(:modified_since => (ago - slop).iso8601).each do |task|
         next if task.name =~ /:\s*$/   # skip sections...
         next if task.name.strip.empty? # skip shite
 
+        batch = Hash.new
+
         task.stories(:opt_fields => 'id,created_at,type,text,created_by.name,created_by.email').map do |story|
-          digest = Digest::MD5.hexdigest(story.to_json)
-
-          if db[:digests].where(:digest => digest).first
-            next
-          else
-            db[:digests].insert(:digest => digest)
-          end
-
           created_at = Coerce.time(story[:created_at])
 
           if created_at >= ago
+            created_by = story[:created_by]
+            next unless created_by
+
+            batch[task] ||= {}
+            batch[task][created_by] ||= []
+            batch[task][created_by].push(story)
+          end
+        end
+
+      #
+        batch.each do |task, created_by_stories|
+          created_by_stories.each do |created_by, stories|
           #
-            created_by = story[:created_by] || Map.new
+            url   = "https://app.asana.com/0/#{ project.id }/#{ task.id }/f"
+            email = created_by[:email]
 
           #
-            from = Map.new
-            from[:name] = created_by[:name]
+            from           = Map.new
+            from[:name]    = created_by[:name]
             from[:address] = created_by[:email]
-
-          #
-            url = "https://app.asana.com/0/#{ project.id }/#{ task.id }/f"
 
           #
             flow = Flowdock::Flow.new(
@@ -130,24 +134,48 @@ Main {
             )
 
           #
-            msg = Map.new
+            activity = []
+            br       = "<br><br>"
+            hr       = "<br><hr><br>"
+
+            stories.reverse.each do |story|
+              activity.push(
+                "#{ story[:text] }#{ br }:: #{ story[:type] } activity#{ hr }"
+              )
+            end
+
+            activity.push(hr)
+            activity.push(url)
+
+            content = activity.join
+
+          #
+            msg           = Map.new
             msg[:format]  = "html"
             msg[:subject] = "#{ project.name } :: #{ task.name }"
-            msg[:content] = "#{ story[:text] }<br><hr><br>:: #{ story[:type] } activity<br><hr><br>#{ url }"
             msg[:tags]    = ["asana"]
+            msg[:content] = content
+
+          #
+            digest = Digest::MD5.hexdigest(msg.to_json)
+
+            next if db[:digests].where(:digest => digest).first
 
           #
             pushed = flow.push_to_team_inbox(msg)
 
             if pushed
+              db[:digests].insert(:digest => digest)
+
+              created_at = stories.map{|story| Coerce.time(story[:created_at])}.max
+
               if most_recent_created_at && created_at > most_recent_created_at
                 most_recent_created_at = created_at
               end
             end
 
-            relayed_any_messages = true if pushed
-
-            logger.info "relayed #{ url }"
+          #
+            logger.info "relayed #{ created_by[:email] } activity for #{ url }"
           end
         end
 

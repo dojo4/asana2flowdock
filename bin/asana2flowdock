@@ -135,16 +135,17 @@ Main {
 
           #
             activity = []
-            br       = "<br><br>"
-            hr       = "<br><hr><br>"
+            br       = "<br>"
+            hr       = "<hr>"
 
-            stories.reverse.each do |story|
+            stories.each do |story|
               activity.push(
-                "#{ story[:text] }#{ br }:: #{ story[:type] } activity#{ hr }"
+                "#{ br }#{ story[:text] }#{ br * 2 }:: #{ story[:type] } activity#{ hr }"
               )
             end
 
             activity.push(hr)
+            activity.push(br)
             activity.push(url)
 
             content = activity.join

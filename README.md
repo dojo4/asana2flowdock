@@ -1,56 +1,85 @@
 TL;DR;
 -----
 
-```bash
+asana2flowdock relays asana events into flowdock.  like this:
 
-# vomit a bunch of messages into https://www.flowdock.com/app/dojo4/dojo4
 
-~> bundle install
+  ![](https://s3.amazonaws.com/ss.dojo4.com/RTbL2P5VyYOWhnhDoKsfG.png)
 
-~> ./bin/asana2flowdock run 
 
-```
+to install it do:
 
-DEPLOY
-------
-
-- this shit runs in a named screenon d0
-- it needs to be restarted by hand if you reboot the box
 
 ```bash
 
-~> ssh dojo4@d0.dojo4.com
+  gem install asana2flowdock
 
-~> cd git/asana2flowdock
-
-~> screen -list # look for the screen yo!
-
-~> screen -d -r asana2flowdock  # or screen -S asana2flowdock
-
-~> ctrl-c
-
-~> git pull
-
-dojo4@ip-10-191-128-13:~/git/asana2flowdock$ while true;do ./bin/asana2flowdock run; done
-# I, [2014-10-24T07:06:18.952743 #28483]  INFO -- : ago: 2014-10-24 05:32:09 +0000
-# I, [2014-10-24T07:06:30.177388 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
-# I, [2014-10-24T07:06:30.178715 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
-# I, [2014-10-24T07:06:30.179640 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
-# I, [2014-10-24T07:06:30.181069 #28483]  INFO -- : relayed https://app.asana.com/0/18611241887243/18611241887251/f
 
 ```
 
+to get going you'll need a configuration file created.  asana2flowdock will
+store it's config file in ~/.asana2flowdock/config.yml, to create one simply
+do:
 
 
+```bash
 
-TODO
-----
-
-- daemonize
-- crontabize
-- store processed stories instead of simply locally?
-- cap deploy?
+  asana2flowdock config
 
 
+```
 
- 
+this should spawn your editor and let you configure both your asana and
+flowdock tokens, and also set the workspace in asana you want to pull activity
+from.  if this fails for any reason you really just need to create a config
+file like so:
+
+
+```yaml
+
+  # file: ~/.asana2flowdock/config.yml
+
+  asana:
+    token: yer_asana_api_token 
+    workspace: dojo4.com # probably should be you asana workspace name ;-)
+
+  flowdock:
+    token: your_flowdock_api_token
+
+
+```
+
+after that, you only need run
+
+
+```bash
+
+~> asana2flowdock
+
+
+```
+
+to begin relaying messages from asana, to flowdock.  to run this command in
+daemon mode you will want to do:
+
+```bash
+
+~> asana2flowdock daemon start
+
+
+```
+
+to learn more type
+
+```bash
+
+~> asana2flowdock help
+
+# OR
+
+~> asana2flowdock daemon usage
+
+
+```
+
+email to : ara@dojo4.com for help and/or feedback

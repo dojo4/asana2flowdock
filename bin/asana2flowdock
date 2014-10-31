@@ -1,31 +1,26 @@
 #! /usr/bin/env ruby
 
 Main {
+#
+  name "asana2flowdock"
+
+#
+  description <<-__
+    asana2flowdock relays asana events into flowdock awesomely
+  __
+
+#
+  config <<-__
+    asana:
+      token: YOUR_ASANA_API_TOKEN
+      workspace: YOUR_ASANA_WORKSPACE_OR_ORGANIZATION_NAME
+
+    flowdock:
+      token: YOUR_FLOWDOCK_API_TOKEN
+  __
 
 #
   db {
-    create_table('stories') do
-      primary_key 'id'
-
-      String 'type'
-      String 'text'
-      String 'digest'
-      Date 'created_at'
-      String 'user_id'
-
-      index :user_id
-      index :digest
-      index :created_at
-    end unless table_exists?('stories')
-
-    create_table('users') do
-      primary_key 'id'
-
-      String 'email'
-
-      index :email
-    end unless table_exists?('users')
-
     create_table('state') do
       primary_key 'id'
 
@@ -38,26 +33,23 @@ Main {
 
     create_table('digests') do
       primary_key 'id'
+
       String 'digest'
+
       index :digest, :unique=>true
     end unless table_exists?('digests')
   }
 
-  option('--daemonize', '-d')
+#
   option('--quiet', '-q')
 
-  dotdir File.expand_path( File.join(File.dirname(__FILE__), "../.asana2flowdock") )
+#
+  daemonizes!
 
+#
   def run
   #
     lock!
-
-  #
-    if params[:daemonize].given?
-      #daemonize!{|pid| puts(pid) if STDOUT.tty?}
-      #redirect_io!("#{ dotdir }/log")
-      #puts "pid: #{ Process.pid }"
-    end
 
   #
     trap('INT'){ exit!(0) }
@@ -76,12 +68,17 @@ Main {
 
   def process_stories!
   #
-    asana = Asana.api_for sekrets.get(:asana, :token)
+    asana = Asana.api_for config.get(:asana, :token)
     #asana.debug = true
     #asana.logger = logger
 
   #
-    workspace = asana.my.workspaces.detect{|workspace| workspace.name == 'dojo4.com'}
+    workspace = asana.my.workspaces.detect{|workspace| workspace.name == config.get(:asana, :workspace)}
+
+    unless workspace
+      workspaces = asana.my.workspaces.map{|workspace| workspace.name}
+      abort "unable to find your workspace=#{ config.get(:asana, :workspace).inspect } in workspaces=#{ workspaces.join(', ') }"
+    end
 
   #
     last_run_time = last_run_time!
@@ -128,7 +125,7 @@ Main {
 
           #
             flow = Flowdock::Flow.new(
-              :api_token => sekrets.get(:flowdock, :token),
+              :api_token => config.get(:flowdock, :token),
               :source    => "asana",
               :project   => project.name,
               :from      => from
@@ -164,8 +161,14 @@ Main {
             next if db[:digests].where(:digest => digest).first
 
           #
-            pushed = flow.push_to_team_inbox(msg)
+            pushed =
+              unless params[:quiet].given?
+                flow.push_to_team_inbox(msg)
+              else
+                true
+              end
 
+          #
             db[:digests].insert(:digest => digest) if pushed
 
           #
@@ -182,8 +185,9 @@ Main {
 
   def last_run_time!
     if db[:state].where(:key => 'last_run_time').first.nil?
-      hr = 60 * 60
+      hr    = 60 * 60
       value = (Time.now - hr).utc.iso8601(3)
+
       db[:state].insert(:key => 'last_run_time', :value => value)
     end
 
@@ -213,13 +217,12 @@ Main {
     Time.parse(db[:state].where(:key => 'last_run_time').first[:value])
   end
 
-  def sekrets
-    path = File.expand_path( File.join(File.dirname(__FILE__), "../config/asana2flowdock.yml.enc") )
-    settings = Map.for(Sekrets.settings_for(path))
-  end
-
 #
   mode(:shell){
+    description <<-__
+      drop into the shell.  fuck with the db.
+    __
+
     def run
       require 'pry'
       Pry.config.hooks.delete_hooks(:before_session)
@@ -230,421 +233,42 @@ Main {
   }
 
 #
-  mode(:db){
-    mode(:dump){
-      def run
-        db[:stories].each do |story|
-          user = db[:users].find(story[:user_id])
-          story[:user] = user
-          y row
-        end
-      end
-    }
+  mode(:config){
+    description <<-__
+      display the configuration.
+    __
+
+    def run
+      config.to_hash.to_yaml.display
+    end
   }
 
 #
-  def daemonize!(options = {}, &block)
-  # optional directory and umask
-  #
-    chdir = options[:chdir] || options['chdir'] || '.'
-    umask = options[:umask] || options['umask'] || 0
-
-  # drop to the background avoiding the possibility of zombies..
-  #
-    detach!(&block)
-
-  # close all open io handles *except* these ones
-  #
-    #keep_ios(STDIN, STDOUT, STDERR, @lock)
-
-  # sane directory and umask
-  #
-    Dir::chdir(chdir)
-    File::umask(umask)
-
-  # global daemon flag
-  #
-    $DAEMON = true
-  end
-
-  def detach!(&block)
-  # setup a pipe to relay the grandchild pid through
-  #
-    a, b = IO.pipe
-
-  # in the parent we wait for the pid, wait on our child to avoid zombies, and
-  # then exit
-  #
-    if fork
-      b.close
-      pid = Integer(a.read.strip)
-      a.close
-      block.call(pid) if block
-      Process.waitall
-      exit!
-    end
-
-  # the child simply exits so it can be reaped - avoiding zombies.  the pipes
-  # are inherited in the grandchild
-  #
-    if fork
-      exit!
-    end
-
-  # finally, the grandchild sends it's pid back up the pipe to the parent is
-  # aware of the pid
-  #
-    a.close
-    b.puts(Process.pid)
-    b.close
-
-  # might as well nohup too...
-  #
-    Process::setsid rescue nil
-  end
-
-  def redirect_io!(options = {})
-    unless options.is_a?(Hash)
-      io = options
-      options = {:stdin => io, :stdout => io, :stderr => io}
-    end
-
-    stdin = options[:stdin]
-    stdout = options[:stdout]
-    stderr = options[:stderr]
-
-    {
-      STDIN => stdin, STDOUT => stdout, STDERR => stderr
-    }.each do |io, file|
-      opened = false
-
-      fd =
-        case
-          when file.is_a?(IO)
-            file
-          when(file.nil? || file.to_s == 'null')
-            opened = true
-            open('/dev/null', 'ab+')
-          else
-            opened = true
-            open(file, 'ab+')
-        end
-
-      begin
-        fd.sync = true rescue nil
-        fd.truncate(0) rescue nil
-        io.reopen(fd)
-      ensure
-        fd.close rescue nil if opened
-      end
-    end
-  end
-
-  def locks
-    @locks = []
-  end
-
   def lock!(which = :default)
     FileUtils.mkdir_p(dotdir)
     path = File.join(dotdir, "#{ which }.lock")
     FileUtils.touch(path) rescue nil
+
     lock = open(path, 'ab+') rescue open(path, 'wb+')
+
     status = lock.flock(File::LOCK_EX|File::LOCK_NB)
-    exit(42) unless status == 0
-    locks.push(lock)
-  end
 
-  def keep_ios(*ios)
-    filenos = []
-
-    ios.flatten.compact.each do |io|
-      begin
-        fileno = io.respond_to?(:fileno) ? io.fileno : Integer(io)
-        filenos.push(fileno)
-      rescue Object
-        next
-      end
+    unless status == 0
+      warn "another process is already running..."
+      exit(42) unless status == 0
     end
 
-    ObjectSpace.each_object(IO) do |io|
-      begin
-        fileno = io.fileno
-        next if filenos.include?(fileno)
-        io.close unless io.closed?
-      rescue Object
-        next
-      end
-    end
+    (@locks ||= []).push(lock)
   end
 }
 
 
 BEGIN {
-# ensure we're running under 'bundle exec'
 #
-  unless ENV['BUNDLE_GEMFILE']
-    command = "bundle exec #{ File.expand_path($0) } #{ ARGV.map{|arg| arg.inspect}.join(' ') }"
-    exec(command)
-  end
-
-#
-  require 'cgi'
-  require 'yaml'
-  require 'digest'
-  require 'net/http'
-  require 'cgi'
-  require 'uri'
-  require 'time'
-  require 'digest/md5'
-
-#
-  require 'main'
-  require 'json'
-  require 'map'
-  require 'coerce'
-  require 'fattr'
-  require 'threadify'
-  require 'sekrets'
-  require 'flowdock'
-  require 'pry'
+  require_relative '../lib/asana2flowdock.rb'
+  Asana = Asana2Flowdock::Asana
 
 #
   STDOUT.sync = true
   STDERR.sync = true
-
-#
-  class Net::HTTP
-    alias_method :old_initialize, :initialize
-
-    def initialize(*args)
-      old_initialize(*args)
-      @ssl_context = OpenSSL::SSL::SSLContext.new
-      @ssl_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
-    end
-  end
-
-#
-  module Asana
-  # ref: http://developer.asana.com/documentation/
-  #
-    class Api
-    #
-      Uri = URI.parse('https://app.asana.com/api/1.0')
-
-    #
-      fattr(:token)
-      fattr(:uri){ Uri.dup }
-      fattr(:debug){ false }
-      fattr(:logger){ nil }
-
-    #
-      def initialize(token = ENV['ASANA_TOKEN'])
-        @token = token
-      end
-
-      def log(level, *args, &block)
-        if logger?
-          logger.send(level, *args, &block)
-        end
-      end
-
-      def me
-        get("/users/me", :model => User)
-      end
-
-      def users(options = {})
-        get("/users", User, options)
-      end
-
-      alias_method :my, :me
-
-      def get(url, *args)
-      #
-        url = url.to_s
-        options = Map.options_for!(args)
-        model = args.detect{|arg| arg <= Model} || options.delete(:model)
-        query = options[:query] || options
-
-      #
-        unless url['://']
-          url = url_for(url)
-        end
-
-      #
-        uri = URI.parse(url)
-
-        unless query.blank?
-          uri.query = query.map{|k,v| [CGI.escape(k.to_s), CGI.escape(v.to_s)].join('=')}.join('&')
-        end
-
-        url = uri.to_s
-
-      #
-        result = nil
-        error = nil
-        cmd = nil
-
-      #
-        3.times do
-          begin
-            cmd = "curl -s -u #{ @token }: #{ url.inspect } 2>/dev/null"
-
-            log(:debug, cmd) if debug
-
-            result = `#{ cmd }`
-            break result
-
-          rescue => e
-            error = e
-            sleep(3)
-            nil
-          end
-        end
-
-      #
-        raise "#{ cmd } blargh'd!?" if error || result.nil?
-
-      #
-        result = JSON.parse(result)
-
-        if result['errors']
-          raise result['errors'].inspect
-        end
-
-        data = result['data']
-
-      #
-        result_for(data, :model => model)
-      end
-
-      def url_for(*paths)
-        uri = Uri.dup
-        path = uri.path
-        uri.path = File.join(path, *paths.flatten.compact.map{|path| path.to_s})
-        uri.to_s
-      end
-
-      def result_for(data, options = {})
-        case data
-          when Array
-            data.map do |item|
-              result_for(item, options)
-            end
-          when Hash
-            attributes = Map.for(data)
-            model = options[:model]
-
-            if model
-              model_for(model, attributes)
-            else
-              attributes
-            end
-          else
-            raise ArgumentError, data.class.name
-        end
-      end
-
-      def model_for(model, *args, &block)
-        model = model.for(*args, &block)
-      ensure
-        model.api = self if model
-      end
-    end
-
-  #
-    class Model < ::Map
-      fattr(:api)
-
-      def Model.for(attributes, *args, &block)
-        new(attributes, *args, &block)
-      end
-
-      def initialize(attributes, *args, &block)
-        super(attributes)
-        options = Map.options_for!(args)
-        if options.has?(:api)
-          @api = options.delete(:api)
-        end
-      end
-
-      def inspect(*args, &block)
-        "#{ self.class.name }(\n#{ super }\n)"
-      end
-
-      %w(
-        model_for
-        url_for
-      ).each do |method|
-        class_eval <<-__
-          def #{ method }(*args, &block)
-            api.#{ method }(*args, &block) if api
-          end
-        __
-      end
-    end
-
-  #
-    class User < Model
-      def workspaces
-        Array(self[:workspaces]).map{|attributes| model_for(Workspace, attributes)}
-      end
-
-      def projects(options = {})
-        options = Map.for(options)
-
-        workspaces.map{|workspace| workspace.projects(options)}
-      end
-
-      def tasks(options = {})
-        options = Map.for(options)
-
-        workspaces.map do |workspace|
-          workspace.tasks(options.merge(:assignee => id))
-        end.flatten.compact
-      end
-    end
-
-  #
-    class Workspace < Model
-      def projects(options = {})
-        api.get("/workspaces/#{ id }/projects", Project, options)
-      end
-
-      def tasks(options = {})
-        options = Map.for(options)
-
-        if options.has?(:assignee)
-          api.get("/tasks", Task, options.merge(:workspace => id))
-        else
-          projects.map do |project|
-            project.tasks(options)
-          end.flatten.compact
-        end
-      end
-    end
-
-  #
-    class Project < Model
-      def tasks(options = {})
-        api.get("/projects/#{ id }/tasks", Task, options)
-      end
-    end
-
-  #
-    class Task < Model
-      def stories(options = {})
-        api.get("/tasks/#{ id }/stories", Story, options)
-      end
-    end
-
-  #
-    class Story < Model
-    end
-
-  #
-    def Asana.api_for(token)
-      token = token.to_s
-      (@apis ||= {})[token] ||= Api.new(token)
-    end
-  end
 }

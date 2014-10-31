@@ -14,7 +14,7 @@
 # dao libs
 #
   module Asana2Flowdock
-    Version = '1.0.0' unless defined?(Version)
+    Version = '1.1.1' unless defined?(Version)
 
     def version
       Asana2Flowdock::Version

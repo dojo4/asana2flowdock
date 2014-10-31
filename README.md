@@ -60,12 +60,17 @@ after that, you only need run
 ```
 
 to begin relaying messages from asana, to flowdock.  to run this command in
-daemon mode you will want to do:
+daemon mode you will want to do things like:
 
 ```bash
 
 ~> asana2flowdock daemon start
 
+~> asana2flowdock daemon pid
+
+~> asana2flowdock daemon tail
+
+~> asana2flowdock daemon stop
 
 ```
 

@@ -7,6 +7,15 @@ asana2flowdock relays asana events into flowdock.  like this:
   ![](https://s3.amazonaws.com/ss.dojo4.com/RTbL2P5VyYOWhnhDoKsfG.png)
 
 
+it currently works around asana's lack of webhooks by keeping a teeny sqlite
+database of local state: a cursor of which messages have been relayed, and
+which have not.  when polling asana for updated tasks it uses this knowledge
+to limit the result set via the 'last_modified' support they provide for
+querying a project's tasks.
+
+this combination allows the amount of polling and data transfered to be kept
+to a minimum.
+
 to install it do:
 
 
@@ -87,4 +96,5 @@ to learn more type
 
 ```
 
-email to : ara@dojo4.com for help and/or feedback
+email to : ara@dojo4.com for help, feedback, or if you want help setting this
+up for your flowdock/asana accounts.

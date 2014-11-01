@@ -3,7 +3,7 @@
 
 Gem::Specification::new do |spec|
   spec.name = "asana2flowdock"
-  spec.version = "1.1.1"
+  spec.version = "1.2.0"
   spec.platform = Gem::Platform::RUBY
   spec.summary = "asana2flowdock"
   spec.description = "asana2flowdock relays asana events into flowdock awesomely"
@@ -34,6 +34,12 @@ Gem::Specification::new do |spec|
   
     spec.add_dependency(*["main", "~> 6.1.0"])
   
+    spec.add_dependency(*["pry", "~> 0.10.1"])
+  
+    spec.add_dependency(*["pry-debugger", "~> 0.2.3"])
+  
+    spec.add_dependency(*["pry-nav", "~> 0.2.4"])
+  
     spec.add_dependency(*["amalgalite"])
   
     spec.add_dependency(*["sequel"])
@@ -47,8 +53,6 @@ Gem::Specification::new do |spec|
     spec.add_dependency(*["fattr"])
   
     spec.add_dependency(*["threadify"])
-  
-    spec.add_dependency(*["pry"])
   
     spec.add_dependency(*["flowdock"])
   

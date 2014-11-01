@@ -14,7 +14,7 @@
 # dao libs
 #
   module Asana2Flowdock
-    Version = '1.1.1' unless defined?(Version)
+    Version = '1.2.0' unless defined?(Version)
 
     def version
       Asana2Flowdock::Version
@@ -22,17 +22,19 @@
 
     def dependencies
       {
-         'arrayfields' =>  [ 'arrayfields' , '~> 4.7.4' ]  , 
-         'main'        =>  [ 'main'        , '~> 6.1.0' ]  , 
-         'amalgalite'  =>  [ 'amalgalite'  ]            , 
-         'sequel'      =>  [ 'sequel'      ]            , 
-         'json'        =>  [ 'json'        ]            , 
-         'map'         =>  [ 'map'         ]            , 
-         'coerce'      =>  [ 'coerce'      ]            , 
-         'fattr'       =>  [ 'fattr'       ]            , 
-         'threadify'   =>  [ 'threadify'   ]            , 
-         'pry'         =>  [ 'pry'         ]            , 
-         'flowdock'    =>  [ 'flowdock'    ]            , 
+         'arrayfields'  => [ 'arrayfields'    , '~> 4.7.4'  ] , 
+         'main'         => [ 'main'           , '~> 6.1.0'  ] , 
+         'pry'          => [ 'pry'            , '~> 0.10.1' ] , 
+         'pry-debugger' => [ 'pry-debugger'   , '~> 0.2.3'  ] , 
+         'pry-nav'      => [ 'pry-nav'        , '~> 0.2.4'  ] , 
+         'amalgalite'   => [ 'amalgalite'   ] , 
+         'sequel'       => [ 'sequel'       ] , 
+         'json'         => [ 'json'         ] , 
+         'map'          => [ 'map'          ] , 
+         'coerce'       => [ 'coerce'       ] , 
+         'fattr'        => [ 'fattr'        ] , 
+         'threadify'    => [ 'threadify'    ] , 
+         'flowdock'     => [ 'flowdock'     ] , 
       }
     end
 

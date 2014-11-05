@@ -3,7 +3,7 @@
 
 Gem::Specification::new do |spec|
   spec.name = "asana2flowdock"
-  spec.version = "1.2.0"
+  spec.version = "1.2.1"
   spec.platform = Gem::Platform::RUBY
   spec.summary = "asana2flowdock"
   spec.description = "asana2flowdock relays asana events into flowdock awesomely"
@@ -17,7 +17,6 @@ Gem::Specification::new do |spec|
  "asana2flowdock.gemspec",
  "bin",
  "bin/asana2flowdock",
- "config",
  "lib",
  "lib/asana2flowdock",
  "lib/asana2flowdock.rb",

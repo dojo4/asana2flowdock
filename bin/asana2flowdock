@@ -127,7 +127,7 @@ Main {
             flow = Flowdock::Flow.new(
               :api_token => config.get(:flowdock, :token),
               :source    => "asana",
-              :project   => project.name,
+              :project   => project.name.gsub(/[^0-9a-z _\-]/i, ''),
               :from      => from
             )
 

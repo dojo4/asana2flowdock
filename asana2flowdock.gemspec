@@ -3,7 +3,7 @@
 
 Gem::Specification::new do |spec|
   spec.name = "asana2flowdock"
-  spec.version = "1.2.0"
+  spec.version = "1.3.0"
   spec.platform = Gem::Platform::RUBY
   spec.summary = "asana2flowdock"
   spec.description = "asana2flowdock relays asana events into flowdock awesomely"
@@ -21,7 +21,8 @@ Gem::Specification::new do |spec|
  "lib",
  "lib/asana2flowdock",
  "lib/asana2flowdock.rb",
- "lib/asana2flowdock/asana.rb"]
+ "lib/asana2flowdock/asana.rb",
+ "lib/asana2flowdock/slug.rb"]
 
   spec.executables = ["asana2flowdock"]
   
@@ -39,6 +40,8 @@ Gem::Specification::new do |spec|
     spec.add_dependency(*["pry-debugger", "~> 0.2.3"])
   
     spec.add_dependency(*["pry-nav", "~> 0.2.4"])
+  
+    spec.add_dependency(*["stringex", ">= 2.1.0"])
   
     spec.add_dependency(*["amalgalite"])
   

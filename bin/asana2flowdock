@@ -41,7 +41,7 @@ Main {
   }
 
 #
-  option('--quiet', '-q')
+  option('--debug', '-d')
 
 #
   daemonizes!
@@ -69,8 +69,11 @@ Main {
   def process_stories!
   #
     asana = Asana.api_for config.get(:asana, :token)
-    #asana.debug = true
-    #asana.logger = logger
+
+    if params[:debug].given?
+      asana.debug = true
+      asana.logger = logger
+    end
 
   #
     workspace = asana.my.workspaces.detect{|workspace| workspace.name == config.get(:asana, :workspace)}
@@ -152,7 +155,7 @@ Main {
             msg           = Map.new
             msg[:format]  = "html"
             msg[:subject] = "#{ project.name } :: #{ task.name }"
-            msg[:tags]    = ["asana"]
+            msg[:tags]    = [slug_for("asana/#{ project.name }"), "asana"]
             msg[:content] = content
 
           #
@@ -162,10 +165,10 @@ Main {
 
           #
             pushed =
-              unless params[:quiet].given?
-                flow.push_to_team_inbox(msg)
-              else
+              if params[:debug].given?
                 true
+              else
+                flow.push_to_team_inbox(msg)
               end
 
           #
@@ -218,9 +221,9 @@ Main {
   end
 
 #
-  mode(:shell){
+  mode(:console){
     description <<-__
-      drop into the shell.  fuck with the db.
+      drop into the console.  fuck with the db.
     __
 
     def run
@@ -260,6 +263,11 @@ Main {
 
     (@locks ||= []).push(lock)
   end
+
+#
+  def slug_for(*args)
+    Slug.for(*args)
+  end
 }
 
 
@@ -267,6 +275,7 @@ BEGIN {
 #
   require_relative '../lib/asana2flowdock.rb'
   Asana = Asana2Flowdock::Asana
+  Slug = Asana2Flowdock::Slug
 
 #
   STDOUT.sync = true

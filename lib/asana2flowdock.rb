@@ -14,7 +14,7 @@
 # dao libs
 #
   module Asana2Flowdock
-    Version = '1.2.0' unless defined?(Version)
+    Version = '1.3.0' unless defined?(Version)
 
     def version
       Asana2Flowdock::Version
@@ -27,6 +27,7 @@
          'pry'          => [ 'pry'            , '~> 0.10.1' ] , 
          'pry-debugger' => [ 'pry-debugger'   , '~> 0.2.3'  ] , 
          'pry-nav'      => [ 'pry-nav'        , '~> 0.2.4'  ] , 
+         'stringex'     => [ 'stringex'       , '>= 2.1.0' ] ,
          'amalgalite'   => [ 'amalgalite'   ] , 
          'sequel'       => [ 'sequel'       ] , 
          'json'         => [ 'json'         ] , 
@@ -80,6 +81,7 @@
   end
 
   Asana2Flowdock.load %w[
+    slug.rb
     asana.rb
   ]
 

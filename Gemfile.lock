@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     asana2flowdock (1.2.0)
-      amalgalite
+      amalgalite (1.3.0)
       arrayfields (~> 4.7.4)
       coerce
       fattr
